@@ -20,7 +20,7 @@ html,body{position:fixed;inset:0;width:100%;height:100%;height:100dvh;overscroll
 #choices{position:absolute;inset:0 0 210px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(0,0,0,.25)}
 .choice{width:640px;padding:18px;text-align:center;font-size:26px;background:rgba(255,255,255,.92);color:#333;border-radius:40px;cursor:pointer;border:3px solid #ff7aa2}
 .choice:hover{background:#ffe0ea}
-.panel{position:absolute;inset:0;background:rgba(5,10,25,.94);display:none;flex-direction:column;align-items:center;padding:40px;z-index:20}
+.panel{position:absolute;inset:0;background:rgba(5,10,25,.94);display:none;flex-direction:column;align-items:center;padding:40px;z-index:40}
 .panel h2{font-size:34px;margin-bottom:20px;color:#ffb3c8}
 #log{width:900px;flex:1;overflow-y:auto;font-size:22px;line-height:1.6;user-select:text}
 #log b{color:#ffb3c8}
@@ -45,6 +45,7 @@ html,body{position:fixed;inset:0;width:100%;height:100%;height:100dvh;overscroll
  <div class="panel" id="cfgp"><h2>设置</h2><div style="font-size:24px;line-height:3">
   文字速度 <input type="range" id="spd" min="5" max="100" value="40"> <br>
   自动播放间隔 <input type="range" id="autod" min="500" max="4000" value="1600"> <br>
+  背景音乐 <label style="cursor:pointer"><input type="checkbox" id="bgmon" style="width:28px;height:28px;vertical-align:middle"> 开启</label> &nbsp; 音量 <input type="range" id="bgmvol" min="0" max="100" value="60"> <br>
   主角名 <input id="pname" style="font-size:22px;width:200px" maxlength="6"></div><span class="btn" onclick="saveCfg()">确定</span></div>
  <div id="title"><h1>南湖物语</h1><p>～ 理工大南湖校区恋爱事件簿 ～</p>
   <span class="btn" onclick="newGame()">开始游戏</span><span class="btn" onclick="openSlots('load')">读取存档</span><span class="btn" onclick="show('cfgp')">设置</span>
@@ -52,6 +53,59 @@ html,body{position:fixed;inset:0;width:100%;height:100%;height:100dvh;overscroll
  <div id="toast"></div>
 </div>
 <script>
+const BGM=(()=>{
+const T={
+ title:{bpm:72,root:62,ch:[[0,4,7,11],[-3,0,4,7],[-7,-3,0,4],[-5,-1,2,7]],lead:'bell',dr:0,arp:1,den:.45,seed:3},
+ daily:{bpm:116,root:60,ch:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],lead:'piano',dr:1,arp:0,den:.75,seed:7,stac:1},
+ canteen:{bpm:132,root:65,ch:[[0,4,7],[5,9,12],[-5,-1,2,5],[0,4,7]],lead:'pluck',dr:2,arp:0,den:.85,seed:11,stac:1},
+ field:{bpm:148,root:57,ch:[[0,3,7],[-4,0,3],[-9,-5,-2],[-2,2,5]],lead:'saw',dr:3,arp:1,den:.8,seed:5},
+ lib:{bpm:84,root:64,ch:[[0,4,7,11],[-4,-1,3,7],[-7,-3,0,4],[-5,-1,2,6]],lead:'piano',dr:4,arp:1,den:.5,seed:9},
+ lake:{bpm:66,root:58,ch:[[0,4,7,11],[-3,0,4,9],[-7,-3,0,2],[-5,-1,2,5]],lead:'bell',dr:0,arp:1,den:.55,seed:13}
+};
+const BGMAP={gate:'daily',dorm:'daily',canteen:'canteen',field:'field',lib:'lib',lake:'lake',title:'title'};
+const SC=[0,2,4,5,7,9,11,12,14,16];
+function rng(s){return()=>(s=(s*16807)%2147483647)/2147483647}
+function mf(m){return 440*Math.pow(2,(m-69)/12)}
+function motif(tr){const r=rng(tr.seed*977+1),bars=[];for(let b=0;b<4;b++){const n=[];let p=4+Math.floor(r()*3);for(let i=0;i<8;i++){if(r()>tr.den&&i%2){n.push(null);continue}const ct=tr.ch[b].map(c=>((c%12)+12)%12);if(i%4==0){let best=p,bd=99;SC.forEach((s,k)=>{if(ct.includes(s%12)&&Math.abs(k-p)<bd){bd=Math.abs(k-p);best=k}});p=best}else{p+=Math.floor(r()*3)-1;p=Math.max(0,Math.min(SC.length-1,p))}n.push(SC[p])}bars.push(n)}return bars}
+function mk(ctx,out){const rev=ctx.createConvolver(),len=ctx.sampleRate*2.2,ir=ctx.createBuffer(2,len,ctx.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3)}rev.buffer=ir;const rg=ctx.createGain();rg.gain.value=.28;rev.connect(rg);rg.connect(out);
+ const nb=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;return{rev,nb}}
+function voice(ctx,o,fx,t,f,d,type,v){const g=ctx.createGain(),lp=ctx.createBiquadFilter();lp.type='lowpass';g.connect(o);g.connect(fx.rev);lp.connect(g);const os=[];
+ const add=(w,fr,a)=>{const x=ctx.createOscillator(),xg=ctx.createGain();x.type=w;x.frequency.value=fr;xg.gain.value=a;x.connect(xg);xg.connect(lp);x.start(t);x.stop(t+d+1.6);os.push(x)};
+ if(type=='piano'){add('triangle',f,.7);add('sine',f*2,.25);add('sine',f*3.01,.06);lp.frequency.setValueAtTime(f*8,t);lp.frequency.exponentialRampToValueAtTime(f*2,t+d+.5);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(v*.3,t+.35);g.gain.exponentialRampToValueAtTime(.0001,t+d+1.2)}
+ else if(type=='bell'){add('sine',f,.6);add('sine',f*2.76,.12);add('sine',f*4.07,.05);add('triangle',f*2,.15);lp.frequency.value=6000;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+d+1.5)}
+ else if(type=='pluck'){add('square',f,.25);add('triangle',f,.6);lp.frequency.setValueAtTime(f*6,t);lp.frequency.exponentialRampToValueAtTime(f*1.2,t+.2);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+Math.min(d,.25)+.15)}
+ else if(type=='saw'){add('sawtooth',f,.3);add('sawtooth',f*1.006,.3);lp.frequency.setValueAtTime(f*5,t);lp.frequency.exponentialRampToValueAtTime(f*2,t+.3);lp.Q.value=2;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v*.7,t+.01);g.gain.setValueAtTime(v*.5,t+d*.8);g.gain.exponentialRampToValueAtTime(.0001,t+d+.25)}
+ else if(type=='pad'){add('sawtooth',f,.2);add('sawtooth',f*1.008,.2);add('triangle',f*.5,.3);lp.frequency.value=900;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.8);g.gain.setValueAtTime(v,t+d-.2);g.gain.linearRampToValueAtTime(.0001,t+d+1)}
+ else if(type=='bass'){add('triangle',f,.9);add('sine',f*2,.15);lp.frequency.value=700;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(v*.4,t+d*.8);g.gain.linearRampToValueAtTime(.0001,t+d+.05)}}
+function drum(ctx,o,fx,t,k,v){if(k=='k'){const x=ctx.createOscillator(),g=ctx.createGain();x.frequency.setValueAtTime(140,t);x.frequency.exponentialRampToValueAtTime(45,t+.15);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);x.connect(g);g.connect(o);x.start(t);x.stop(t+.35);return}
+ const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();s.buffer=fx.nb;f.type=k=='h'?'highpass':'bandpass';f.frequency.value=k=='h'?8000:1800;const d=k=='h'?.05:k=='sh'?.09:.18;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);s.connect(f);f.connect(g);g.connect(o);if(k=='s')g.connect(fx.rev);s.start(t);s.stop(t+d+.02)}
+// schedule one bar
+function bar(ctx,o,fx,tr,mo,b,t){const be=60/tr.bpm,c=tr.ch[b%4],R=tr.root,m=mo[b%4];const half=Math.floor(b/4)%2;
+ c.forEach(n=>voice(ctx,o,fx,t,mf(R+n-12),be*4,'pad',.045));
+ const bn=R+c[0]-24;if(tr.dr==0||tr.dr==4){voice(ctx,o,fx,t,mf(bn),be*2,'bass',.22);voice(ctx,o,fx,t+be*2,mf(bn+7),be*2,'bass',.16)}else for(let i=0;i<4;i++)voice(ctx,o,fx,t+i*be+(tr.dr==2&&i%2?be/2:0),mf(i==2?bn+7:bn),be*.6,'bass',.24);
+ if(tr.arp)for(let i=0;i<8;i++){const n=c[[0,1,2,1,3%c.length,2,1,2][i]%c.length];voice(ctx,o,fx,t+i*be/2,mf(R+n+(tr.dr==3?0:12)),be/2,tr.dr==3?'pluck':'bell',.035)}
+ m.forEach((n,i)=>{if(n==null)return;if(half&&i==7)return;const nn=half&&i>=6?SC[(SC.indexOf(n)+1)%SC.length]:n;voice(ctx,o,fx,t+i*be/2,mf(R+nn),tr.stac?be*.4:be*.9,tr.lead,tr.lead=='saw'?.09:.13)});
+ const D=tr.dr;for(let i=0;i<8;i++){const tt=t+i*be/2;if(D==1){if(i%4==0)drum(ctx,o,fx,tt,'k',.5);if(i%4==2)drum(ctx,o,fx,tt,'s',.22);drum(ctx,o,fx,tt,'h',i%2?.05:.08)}
+  if(D==2){if(i%2==0)drum(ctx,o,fx,tt,'k',.45);if(i%4==2)drum(ctx,o,fx,tt,'s',.25);drum(ctx,o,fx,tt+be/4,'sh',.06)}
+  if(D==3){if(i%2==0)drum(ctx,o,fx,tt,'k',.6);if(i%4==2)drum(ctx,o,fx,tt,'s',.3);drum(ctx,o,fx,tt,'h',.07);drum(ctx,o,fx,tt+be/4,'h',.04)}
+  if(D==4){if(i==0)drum(ctx,o,fx,tt,'k',.25);if(i%2)drum(ctx,o,fx,tt,'sh',.035)}}
+ return be*4}
+let ctx,master,cur=null,want=null,cfgv={on:true,vol:.6},timer;
+try{Object.assign(cfgv,JSON.parse(localStorage.getItem('nh_bgm')||'{}'))}catch(e){}
+function ensure(){if(ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ctx=new AC();master=ctx.createGain();master.gain.value=cfgv.on?cfgv.vol:0;const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination)}
+function startTrack(name){if(!ctx)return;if(cur&&cur.name==name)return;if(cur){const c=cur;c.g.gain.cancelScheduledValues(ctx.currentTime);c.g.gain.setValueAtTime(c.g.gain.value,ctx.currentTime);c.g.gain.linearRampToValueAtTime(0,ctx.currentTime+1);c.dead=true;setTimeout(()=>c.g.disconnect(),2600)}
+ if(!name||!T[name]){cur=null;return}const g=ctx.createGain();g.gain.setValueAtTime(0,ctx.currentTime);g.gain.linearRampToValueAtTime(1,ctx.currentTime+1);g.connect(master);const tr=T[name];cur={name,g,tr,mo:motif(tr),fx:mk(ctx,g),b:0,t:ctx.currentTime+.05}}
+function tick(){if(!ctx||ctx.state!='running'||!cur)return;while(cur.t<ctx.currentTime+.6){cur.t+=bar(ctx,cur.g,cur.fx,cur.tr,cur.mo,cur.b,cur.t);cur.b=(cur.b+1)%8}}
+function play(name){want=name;if(ctx)startTrack(name)}
+function unlock(){ensure();if(!ctx)return;if(ctx.state!='running')ctx.resume();if(!timer)timer=setInterval(tick,150);if(want&&(!cur||cur.name!=want))startTrack(want)}
+['pointerdown','touchend','click','keydown'].forEach(e=>document.addEventListener(e,unlock,true));
+document.addEventListener('visibilitychange',()=>{if(!ctx)return;document.hidden?ctx.suspend():ctx.resume()});
+function set(o){Object.assign(cfgv,o);localStorage.setItem('nh_bgm',JSON.stringify(cfgv));if(master)master.gain.setTargetAtTime(cfgv.on?cfgv.vol:0,ctx.currentTime,.1)}
+return{play,set,get cfg(){return cfgv},get state(){return{ctx:ctx&&ctx.state,track:cur&&cur.name}},forBg:k=>BGMAP[k],T,motif,mk,bar};
+})();
+
+BGM.play("title");
+
 /* ===== 场景（插画风示意，非实景） ===== */
 const BG={
  gate:{n:'南大门',sky:['#ffd29d','#ff9a8b'],draw:`<rect y="420" width="1280" height="300" fill="#8a9a6b"/><rect x="390" y="230" width="500" height="200" fill="#e9e4da"/><rect x="560" y="300" width="160" height="130" fill="#6b7a8f"/><text x="640" y="275" font-size="40" text-anchor="middle" fill="#7a2b2b">武汉理工大学</text>`},
@@ -143,7 +197,7 @@ function fit(){const vv=window.visualViewport,W=vv?vv.width:innerWidth,H=vv?vv.h
 addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));if(window.visualViewport)visualViewport.addEventListener('resize',fit);fit();
 document.addEventListener('touchmove',e=>{if(e.target.type!=='range'&&!e.target.closest('#log'))e.preventDefault()},{passive:false});
 let triedLock=false;document.addEventListener('pointerdown',async()=>{if(triedLock)return;triedLock=true;try{const el=document.documentElement;if(el.requestFullscreen&&innerHeight>innerWidth&&/Android/i.test(navigator.userAgent)&&!/MicroMessenger/i.test(navigator.userAgent)){await el.requestFullscreen({navigationUI:'hide'});await screen.orientation.lock('landscape')}}catch(e){}finally{setTimeout(fit,300)}},{once:false});
-function setBg(k){st.bg=k;const b=BG[k];if(BGIMG[k]){$('bg').style.background=`center/cover no-repeat url(${BGIMG[k]})`;$('bgsvg').innerHTML=''}else{$('bg').style.background=`linear-gradient(${b.sky[0]},${b.sky[1]})`;$('bgsvg').innerHTML=b.draw.replace(/<text[^>]*>[^<]*<\/text>/g,'')}$('place').textContent=b.n;$('place').style.display=b.n?'':'none'}
+function setBg(k){st.bg=k;const _m=BGM.forBg(k);if(_m)BGM.play(_m);const b=BG[k];if(BGIMG[k]){$('bg').style.background=`center/cover no-repeat url(${BGIMG[k]})`;$('bgsvg').innerHTML=''}else{$('bg').style.background=`linear-gradient(${b.sky[0]},${b.sky[1]})`;$('bgsvg').innerHTML=b.draw.replace(/<text[^>]*>[^<]*<\/text>/g,'')}$('place').textContent=b.n;$('place').style.display=b.n?'':'none'}
 function setShow(a,speaker){st.show=a;$('chars').innerHTML=a.map(([id,x])=>`<div class="ch ${speaker&&speaker!==id?'dim':''}" style="left:${x}px">${CH[id].svg}</div>`).join('')}
 function P(t){return t.replace(/\{P\}/g,cfg.pname||'吴文昊')}
 function updAff(){const a=st.aff;$('aff').textContent=`💗 晓汐${a.xi} · 糖${a.tang} · 柠${a.ning}`}
@@ -151,6 +205,7 @@ function step(){clearTimeout(timer);while(true){const c=S[st.pc];if(!c)return;
  if(c.bg){setBg(c.bg);st.pc++;continue}
  if(c.show){setShow(c.show);st.pc++;continue}
  if(c.label){st.pc++;continue}
+ if(c.bgm!==undefined){BGM.play(c.bgm);st.pc++;continue}
  if(c.jump){st.pc=LBL[c.jump];continue}
  if(c.ifEnd){const a=st.aff,m=Math.max(a.xi,a.tang,a.ning);let e='end_normal';if(a.bro>=5)e='end_bro';else if(m>=4)e=a.xi===m?'end_xi':a.tang===m?'end_tang':'end_ning';st.pc=LBL[e];continue}
  if(c.title){toTitle();return}
@@ -170,9 +225,9 @@ $('menu').onclick=e=>{const a=e.target.dataset.a;if(!a)return;e.stopPropagation(
  if(a==='skip'){skip=!skip;auto=false;mark();if(skip&&!typing)step()}
  if(a==='log'){$('log').innerHTML=log.map(([n,t])=>`<p>${n?`<b>${n}</b>：`:''}${t}</p>`).join('');show('logp');$('log').scrollTop=1e9}
  if(a==='save')openSlots('save');if(a==='load')openSlots('load');if(a==='cfg')show('cfgp');if(a==='title')toTitle()};
-function show(id){if(id==='cfgp'){$('spd').value=cfg.spd;$('autod').value=cfg.autod;$('pname').value=cfg.pname}$(id).style.display='flex';auto=skip=false;mark()}
+function show(id){if(id==='cfgp'){$('spd').value=cfg.spd;$('autod').value=cfg.autod;$('pname').value=cfg.pname;$('bgmon').checked=BGM.cfg.on;$('bgmvol').value=Math.round(BGM.cfg.vol*100)}$(id).style.display='flex';auto=skip=false;mark()}
 function hide(id){$(id).style.display='none'}
-function saveCfg(){cfg={spd:+$('spd').value,autod:+$('autod').value,pname:$('pname').value.trim()||'吴文昊'};localStorage.setItem('nh_cfg',JSON.stringify(cfg));hide('cfgp')}
+function saveCfg(){BGM.set({on:$('bgmon').checked,vol:$('bgmvol').value/100});cfg={spd:+$('spd').value,autod:+$('autod').value,pname:$('pname').value.trim()||'吴文昊'};localStorage.setItem('nh_cfg',JSON.stringify(cfg));hide('cfgp')}
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',1500)}
 function openSlots(mode){$('slott').textContent=mode==='save'?'存档':'读档';const box=$('slots');box.innerHTML='';
  for(let i=1;i<=6;i++){const d=JSON.parse(localStorage.getItem('nh_slot'+i)||'null');const e=document.createElement('div');e.className='slot';
@@ -181,5 +236,7 @@ function openSlots(mode){$('slott').textContent=mode==='save'?'存档':'读档';
    else if(d){st=d.st;hide('slotp');$('title').style.display='none';$('choices').style.display='none';log=[];setBg(st.bg);setShow(st.show);updAff();step();toast('已读取')}};box.appendChild(e)}
  show('slotp')}
 function newGame(){st={pc:0,aff:{xi:0,tang:0,ning:0,bro:0},bg:'black',show:[]};log=[];$('title').style.display='none';updAff();step()}
-function toTitle(){auto=skip=false;mark();clearTimeout(timer);$('choices').style.display='none';$('title').style.display='flex'}
+function toTitle(){auto=skip=false;mark();clearTimeout(timer);$('choices').style.display='none';$('title').style.display='flex';BGM.play('title')}
+;(()=>{const m=document.getElementById('menu'),b=document.createElement('span');b.className='btn';b.id='bgmbtn';const u=()=>b.textContent=BGM.cfg.on?'♪开':'♪关';u();b.onclick=e=>{e.stopPropagation();BGM.set({on:!BGM.cfg.on});u()};m.appendChild(b);
+['bgmon','bgmvol'].forEach(i=>document.getElementById(i).addEventListener('input',()=>{BGM.set({on:$('bgmon').checked,vol:$('bgmvol').value/100});u()}))})();
 </script></body></html>
