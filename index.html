@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="screen-orientation" content="landscape"><title>南湖物语：理工大恋爱事件簿</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
-html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;color:#fff}
+html,body{position:fixed;inset:0;width:100%;height:100%;height:100dvh;overscroll-behavior:none;touch-action:manipulation;background:#000;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;color:#fff}
 #stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center;overflow:hidden;background:#123}
 #bg{position:absolute;inset:0;transition:background 1s}
 #bgsvg{position:absolute;inset:0;width:100%;height:100%}
@@ -32,10 +32,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:"Pi
 #title .btn{font-size:28px;padding:12px 60px;margin:8px;width:320px;text-align:center}
 #toast{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:#ff7aa2;padding:8px 24px;border-radius:20px;font-size:20px;display:none;z-index:50}
 #aff{position:absolute;right:24px;top:20px;font-size:18px;background:rgba(0,0,0,.45);padding:6px 12px;border-radius:6px}
-#rot{display:none;position:fixed;inset:0;background:#000;z-index:99;align-items:center;justify-content:center;font-size:22px}
-@media (orientation:portrait) and (max-width:820px){#rot{display:flex}}
 </style></head><body>
-<div id="rot">📱 请横屏游玩～</div>
 <div id="stage">
  <div id="bg"><svg id="bgsvg" viewBox="0 0 1280 720" preserveAspectRatio="none"></svg></div>
  <div id="place"></div><div id="aff"></div>
@@ -139,7 +136,12 @@ const S=[
 const $=id=>document.getElementById(id);const LBL={};S.forEach((c,i)=>{if(c.label)LBL[c.label]=i});
 let st={pc:0,aff:{xi:0,tang:0,ning:0,bro:0},bg:'black',show:[],name:''},cfg=JSON.parse(localStorage.getItem('nh_cfg')||'{"spd":40,"autod":1600,"pname":"吴文昊"}');
 let typing=null,full='',auto=false,skip=false,log=[],busy=false,timer=null;
-function fit(){const s=Math.min(innerWidth/1280,innerHeight/720);$('stage').style.transform=`translate(-50%,-50%) scale(${s})`}addEventListener('resize',fit);fit();
+function fit(){const vv=window.visualViewport,W=vv?vv.width:innerWidth,H=vv?vv.height:innerHeight;const st=$('stage');st.style.top=(H/2)+'px';
+ if(H>W){const s=Math.min(H/1280,W/720);st.style.transform=`translate(-50%,-50%) rotate(90deg) scale(${s})`}
+ else{const s=Math.min(W/1280,H/720);st.style.transform=`translate(-50%,-50%) scale(${s})`}}
+addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));if(window.visualViewport)visualViewport.addEventListener('resize',fit);fit();
+document.addEventListener('touchmove',e=>{if(e.target.type!=='range'&&!e.target.closest('#log'))e.preventDefault()},{passive:false});
+let triedLock=false;document.addEventListener('pointerdown',async()=>{if(triedLock)return;triedLock=true;try{const el=document.documentElement;if(el.requestFullscreen&&innerHeight>innerWidth&&/Android/i.test(navigator.userAgent)&&!/MicroMessenger/i.test(navigator.userAgent)){await el.requestFullscreen({navigationUI:'hide'});await screen.orientation.lock('landscape')}}catch(e){}finally{setTimeout(fit,300)}},{once:false});
 function setBg(k){st.bg=k;const b=BG[k];$('bg').style.background=`linear-gradient(${b.sky[0]},${b.sky[1]})`;$('bgsvg').innerHTML=b.draw;$('place').textContent=b.n;$('place').style.display=b.n?'':'none'}
 function setShow(a,speaker){st.show=a;$('chars').innerHTML=a.map(([id,x])=>`<div class="ch ${speaker&&speaker!==id?'dim':''}" style="left:${x}px">${CH[id].svg}</div>`).join('')}
 function P(t){return t.replace(/\{P\}/g,cfg.pname||'吴文昊')}
