@@ -62,7 +62,7 @@ const T={
  lib:{bpm:84,root:64,ch:[[0,4,7,11],[-4,-1,3,7],[-7,-3,0,4],[-5,-1,2,6]],lead:'piano',dr:4,arp:1,den:.5,seed:9},
  lake:{bpm:66,root:58,ch:[[0,4,7,11],[-3,0,4,9],[-7,-3,0,2],[-5,-1,2,5]],lead:'bell',dr:0,arp:1,den:.55,seed:13}
 };
-const BGMAP={gate:'daily',dorm:'daily',canteen:'canteen',field:'field',lib:'lib',lake:'lake',title:'title'};
+const BGMAP={gate:'daily',dorm:'daily',canteen:'canteen',field:'field',lib:'lib',lake:'lake',lakenight:'lake',title:'title'};
 const SC=[0,2,4,5,7,9,11,12,14,16];
 function rng(s){return()=>(s=(s*16807)%2147483647)/2147483647}
 function mf(m){return 440*Math.pow(2,(m-69)/12)}
@@ -108,6 +108,7 @@ BGM.play("title");
 
 /* ===== 场景（插画风示意，非实景） ===== */
 const BG={
+ lakenight:{n:'南湖畔 · 夜',sky:['#0a0f2d','#000'],draw:''},
  gate:{n:'南大门',sky:['#ffd29d','#ff9a8b'],draw:`<rect y="420" width="1280" height="300" fill="#8a9a6b"/><rect x="390" y="230" width="500" height="200" fill="#e9e4da"/><rect x="560" y="300" width="160" height="130" fill="#6b7a8f"/><text x="640" y="275" font-size="40" text-anchor="middle" fill="#7a2b2b">武汉理工大学</text>`},
  lib:{n:'南湖校区图书馆',sky:['#bfe3ff','#7fb2e5'],draw:`<rect y="460" width="1280" height="260" fill="#a7b89a"/><rect x="300" y="150" width="680" height="320" fill="#d8d2c4"/>${[...Array(6)].map((_,i)=>`<rect x="${340+i*105}" y="190" width="70" height="240" fill="#7d9bb8"/>`).join('')}<text x="640" y="135" font-size="34" text-anchor="middle" fill="#334">图 书 馆</text>`},
  canteen:{n:'智苑食堂',sky:['#ffe8b0','#ffc078'],draw:`<rect y="430" width="1280" height="290" fill="#c79a6b"/><rect x="200" y="180" width="880" height="260" fill="#f3e3c8"/><rect x="250" y="260" width="780" height="120" fill="#ffd68a"/><text x="640" y="235" font-size="40" text-anchor="middle" fill="#8a4b1d">智 园 食 堂</text>${[...Array(5)].map((_,i)=>`<circle cx="${320+i*160}" cy="520" r="45" fill="#8b5e3c"/>`).join('')}`},
@@ -127,7 +128,7 @@ const CH={xi:{n:'林晓汐',svg:'<img src="'+SP.xi+'">'},tang:{n:'苏念',svg:'<
  bg:场景  show:[[id,位置x]]  say:[说话人id或'me'或'',文本]  choice:[[文本,{好感变化},跳转标签]]  label/jump/ifEnd */
 const S=[
 {"label": "start"},
-{"bg": "black"},
+{"bg": "lakenight"},
 {"show": []},
 {"say": ["", "十月末，晚上十一点，南湖边。"]},
 {"say": ["", "风从湖面吹过来，带着武汉秋天特有的潮气。"]},
@@ -692,7 +693,7 @@ const S=[
 {"say": ["", "【NORMAL END · 南湖的风】也许下一个学期，故事才真正开始？"]},
 {"jump": "fin"},
 {"label": "fin"},
-{"bg": "black"},
+{"bg": "lakenight"},
 {"show": []},
 {"say": ["", "—— 感谢游玩《南湖物语》 ——"]},
 {"say": ["", "还有其他结局等你去发现哦。"]},
@@ -708,7 +709,7 @@ function fit(){const vv=window.visualViewport,W=vv?vv.width:innerWidth,H=vv?vv.h
 addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));if(window.visualViewport)visualViewport.addEventListener('resize',fit);fit();
 document.addEventListener('touchmove',e=>{if(e.target.type!=='range'&&!e.target.closest('#log'))e.preventDefault()},{passive:false});
 let triedLock=false;document.addEventListener('pointerdown',async()=>{if(triedLock)return;triedLock=true;try{const el=document.documentElement;if(el.requestFullscreen&&innerHeight>innerWidth&&/Android/i.test(navigator.userAgent)&&!/MicroMessenger/i.test(navigator.userAgent)){await el.requestFullscreen({navigationUI:'hide'});await screen.orientation.lock('landscape')}}catch(e){}finally{setTimeout(fit,300)}},{once:false});
-function setBg(k){st.bg=k;const _m=BGM.forBg(k);if(_m)BGM.play(_m);const b=BG[k];if(BGIMG[k]){$('bg').style.background=`center/cover no-repeat url(${BGIMG[k]})`;$('bgsvg').innerHTML=''}else{$('bg').style.background=`linear-gradient(${b.sky[0]},${b.sky[1]})`;$('bgsvg').innerHTML=b.draw.replace(/<text[^>]*>[^<]*<\/text>/g,'')}$('place').textContent=b.n;$('place').style.display=b.n?'':'none'}
+function setBg(k){st.bg=k;const _m=BGM.forBg(k);if(_m)BGM.play(_m);const b=BG[k];if(k==='lakenight'){$('bg').style.background=`radial-gradient(ellipse at center,rgba(5,10,30,.15) 35%,rgba(0,0,10,.75) 100%),linear-gradient(rgba(10,15,45,.45),rgba(10,15,45,.45)),center/cover no-repeat url(${BGIMG.lake})`;$('bgsvg').innerHTML=''}else if(BGIMG[k]){$('bg').style.background=`center/cover no-repeat url(${BGIMG[k]})`;$('bgsvg').innerHTML=''}else{$('bg').style.background=`linear-gradient(${b.sky[0]},${b.sky[1]})`;$('bgsvg').innerHTML=b.draw.replace(/<text[^>]*>[^<]*<\/text>/g,'')}$('place').textContent=b.n;$('place').style.display=b.n?'':'none'}
 function setShow(a,speaker){st.show=a;$('chars').innerHTML=a.map(([id,x])=>`<div class="ch ${speaker&&speaker!==id?'dim':''}" style="left:${x}px">${CH[id].svg}</div>`).join('')}
 function P(t){return t.replace(/\{P\}/g,cfg.pname||'吴文昊')}
 function updAff(){const a=st.aff;$('aff').textContent=`💗 晓汐${a.xi} · 念${a.tang} · 柠${a.ning}`}
