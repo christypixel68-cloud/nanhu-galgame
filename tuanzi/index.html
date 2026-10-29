@@ -5,6 +5,10 @@
 <style>html,body{margin:0;height:100%;background:#24182f;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 #c{position:absolute;left:0;top:0;transform-origin:0 0;display:block}</style></head><body><canvas id="c"></canvas>
 <script>
+(function(){var P=window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype;if(P&&!P.roundRect){P.roundRect=function(x,y,w,h,r){if(typeof r==='object'&&r!==null)r=(r.length?r[0]:r.x)||0;r=Math.max(0,Math.min(+r||0,Math.abs(w)/2,Math.abs(h)/2));this.moveTo(x+r,y);this.lineTo(x+w-r,y);this.arcTo(x+w,y,x+w,y+r,r);this.lineTo(x+w,y+h-r);this.arcTo(x+w,y+h,x+w-r,y+h,r);this.lineTo(x+r,y+h);this.arcTo(x,y+h,x,y+h-r,r);this.lineTo(x,y+r);this.arcTo(x,y,x+r,y,r);this.closePath();return this;};}
+window.addEventListener('error',function(e){try{var d=document.getElementById('__err')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'__err'}));d.style.cssText='position:fixed;left:0;top:0;right:0;z-index:99;background:#000c;color:#ff8;font:12px monospace;padding:6px;white-space:pre-wrap';d.textContent+='出错: '+e.message+' @'+(e.lineno||'')+'\n';}catch(_){}});})();
+</script>
+<script>
 'use strict';
 const W=960,H=540,GY=440,OL='#3b2350',cv=document.getElementById('c'),g=cv.getContext('2d');
 if(!g.roundRect)CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();};
@@ -12,7 +16,7 @@ let rot=false,sc=1,ox=0,oy=0;
 function fit(){const vw=innerWidth,vh=innerHeight;rot=vh>vw;const aw=rot?vh:vw,ah=rot?vw:vh;sc=Math.min(aw/W,ah/H);const dpr=Math.min(devicePixelRatio||1,2);
 cv.width=Math.round(W*sc*dpr);cv.height=Math.round(H*sc*dpr);cv.style.width=W*sc+'px';cv.style.height=H*sc+'px';g.setTransform(sc*dpr,0,0,sc*dpr,0,0);ox=(aw-W*sc)/2;oy=(ah-H*sc)/2;
 cv.style.transform=rot?`translate(${vw-oy}px,${ox}px) rotate(90deg)`:`translate(${ox}px,${oy}px)`;}
-addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));fit();
+addEventListener('resize',fit);let __lw=0,__lh=0;setInterval(()=>{if(innerWidth!==__lw||innerHeight!==__lh){__lw=innerWidth;__lh=innerHeight;if(__lw&&__lh)fit();}},400);addEventListener('orientationchange',()=>setTimeout(fit,200));fit();
 function toGame(cx,cy){let x,y;if(rot){x=cy-ox;y=innerWidth-cx-oy;}else{x=cx-ox;y=cy-oy;}return[x/sc,y/sc];}
 const R=Math.random,TAU=Math.PI*2,clamp=(v,a,b)=>v<a?a:v>b?b:v;
 function hsh(n){const s=Math.sin(n*127.1+311.7)*43758.5453;return s-Math.floor(s)}
@@ -111,8 +115,8 @@ banner={a:CH[c].sub+(loop?' · '+(loop+1)+'周目':''),b:CH[c].n,t:2.6,col:'#ffd
 function startCh(c){storyQ={pages:STORY[c],i:0,t:0,done:()=>newRun(c),c};scene='story';}
 const diff=()=>1+cur*.55+loop*2.2;
 // ================= SPAWN =================
-function mkE(k,x,y){const d=ED[k],m=diff()*(1+(wave-1)*.15);const e={k,b:d.b,r:d.r,hp:d.hp*m,mhp:d.hp*m,sp:d.sp*(1+loop*.15)*(.9+R()*.2),xp:d.xp,x:x??W+40,y:0,vx:0,vy:0,ph:R()*6,fl:0,slow:0,st:0,cd:1.5+R(),oc:0,base:0};
-if(e.b=='fly'||e.b=='shoot'||e.b=='dive'){e.base=y??(190+R()*150);e.y=e.base;e.fly=1}else if(e.b=='swing'){e.fly=1;e.anc=e.x;e.len=0;e.base=170+R()*90;e.y=0;}else{e.y=GY-e.r;}if(k=='mini')e.y=y??GY-e.r;ens.push(e);return e;}
+function mkE(k,x,y){const d=ED[k],m=diff()*(1+(wave-1)*.15);const e={k,b:d.b,r:d.r,hp:d.hp*m,mhp:d.hp*m,sp:d.sp*(1+loop*.15)*(.9+R()*.2),xp:d.xp,x:(x!=null?x:W+40),y:0,vx:0,vy:0,ph:R()*6,fl:0,slow:0,st:0,cd:1.5+R(),oc:0,base:0};
+if(e.b=='fly'||e.b=='shoot'||e.b=='dive'){e.base=(y!=null?y:(190+R()*150));e.y=e.base;e.fly=1}else if(e.b=='swing'){e.fly=1;e.anc=e.x;e.len=0;e.base=170+R()*90;e.y=0;}else{e.y=GY-e.r;}if(k=='mini')e.y=(y!=null?y:GY-e.r);ens.push(e);return e;}
 function spawn(){const L=CH[cur].e;let k=L[0];const r=R();if(wave>1||r<.35)k=L[Math.floor(R()*L.length)];mkE(k);}
 function spawnBoss(){const id=CH[cur].boss;const hp=BHP[id]*(1+loop*2.2);boss={k:'boss',id,b:'boss',r:[58,62,58,62,66][id],hp,mhp:hp,x:W+120,y:GY-60,vx:0,vy:0,ph:0,fl:0,slow:0,mode:'enter',mt:0,bt:2,mi:0,xp:0,home:740,boss:1,cd:0,oc:0};
 if(id==4)boss.y=280;if(id==0)boss.y=GY-58;if(id==1)boss.y=GY-62;if(id==2)boss.y=GY-58;if(id==3)boss.y=GY-62;ens.push(boss);bossOn=true;sfx.boss();setSong(6);
