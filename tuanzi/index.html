@@ -103,7 +103,7 @@ const ENDING=['滚木的大木头「咚」地倒在地上，他从阴影里现�
 const ED={clown:{b:'hop',r:28,hp:5,sp:60,xp:2},spider:{b:'swing',r:24,hp:4,sp:90,xp:2},super:{b:'fly',r:24,hp:4,sp:150,xp:1},hulk:{b:'walk',r:32,hp:12,sp:92,xp:3},bat:{b:'dive',r:24,hp:5,sp:105,xp:2},iron:{b:'shoot',r:24,hp:5,sp:120,xp:2},slime:{b:'hop',r:24,hp:3,sp:70,xp:1},bee:{b:'fly',r:18,hp:2,sp:125,xp:1},rock:{b:'walk',r:28,hp:8,sp:48,xp:2},goat:{b:'charge',r:26,hp:4,sp:55,xp:2},
 shroom:{b:'hop',r:24,hp:5,sp:62,xp:1},owl:{b:'shoot',r:22,hp:4,sp:120,xp:2},penguin:{b:'slide',r:22,hp:4,sp:175,xp:1},snowbat:{b:'shoot',r:20,hp:4,sp:120,xp:2},
 knight:{b:'walk',r:28,hp:11,sp:55,xp:2},ghost:{b:'dive',r:22,hp:5,sp:100,xp:2},mini:{b:'hop',r:16,hp:3,sp:90,xp:1}};
-const bossHP=c=>{const L=CH[c].e;let a=0;for(const k of L)a+=ED[k].hp;return 20*a/L.length*(1+c*.55+loop*2.2);};
+const BHP=[70,95,120,145,190,240];const bossHP=c=>BHP[CH[c].boss]*20*(1+loop*2.2);
 const UPG=[{k:'atk',n:'粉笔弹威力',d:'初始攻击 +1',c:l=>20+l*18,m:10},{k:'hp',n:'软糯体质',d:'初始生命 +1',c:l=>25+l*22,m:8},{k:'spd',n:'连发手速',d:'射速 +8%',c:l=>30+l*20,m:8},
 {k:'crit',n:'会心修行',d:'暴击率 +5%',c:l=>30+l*25,m:6},{k:'coin',n:'招财糯米',d:'金币 +15%',c:l=>20+l*15,m:8},{k:'ult',n:'爆发充能',d:'大招充能 +20%',c:l=>25+l*20,m:5}];
 const PK=[
@@ -790,7 +790,7 @@ button({x:W/2+40,y:426,w:180,h:50,f:()=>scene='help'},'玩法说明','#ffc6ff',2
 if(rstQ){buttons.length=0;g.fillStyle='rgba(30,15,45,.7)';g.fillRect(0,0,W,H);panel(W/2-230,150,460,240);txt('确定从1周目重新开始？',W/2,215,32,'#3b2350','center',null);txt('周目和章节进度会清零，金币和商店强化保留',W/2,262,17,'#9a8c98','center',null);
 button({x:W/2-190,y:300,w:170,h:62,f:()=>{save.loop=0;save.unlocked=1;save.ch=0;store();rstQ=0;sfx.lvl();say(W/2,120,'已重置到1周目','#ffd23f',30);}},'确定','#ff8fab',26);button({x:W/2+20,y:300,w:170,h:62,f:()=>{rstQ=0}},'取消','#a0c4ff',26);}
 for(const f of floats)txt(f.s,f.x,f.y,f.sz,f.c,'center',OL,5);}
-let rstQ=0;
+let rstQ=0,lvQ=0;
 function drawChapters(){bg(save.ch);g.fillStyle='rgba(30,15,45,.45)';g.fillRect(0,0,W,H);txt('选择章节',W/2,60,42,'#ffd23f');
 CH.forEach((ch,i)=>{const x=24+i*154,y=120,lock=i>=save.unlocked;panel(x,y,142,300,lock?'#d9d2e0':'#fff8ef');const sk=g.createLinearGradient(0,y,0,y+150);sk.addColorStop(0,ch.sky[0]);sk.addColorStop(1,ch.sky[1]);g.fillStyle=sk;rr(x+9,y+10,124,140,16);g.fill();
 g.fillStyle=ch.gr;rr(x+9,y+120,124,30,8);g.fill();if(!lock){g.save();g.beginPath();g.rect(x+9,y+10,124,140);g.clip();drawBoss({id:ch.boss,fl:0,hp:1,mhp:1},x+71,y+92,.58);g.restore();}else{txt('?',x+71,y+80,64,'#fff');}
@@ -803,7 +803,10 @@ UPG.forEach((u,i)=>{const col=i%2,row=i/2|0,x=110+col*375,y=130+row*110,l=save.u
 E(x+40,y+48,26,26,PK[i*3%PK.length].c,OL,3);txt(u.n[0],x+40,y+49,24,'#fff',undefined,OL,4);txt(u.n,x+78,y+30,22,'#3b2350','left',null);txt(u.d,x+78,y+58,16,'#6d597a','left',null);
 for(let k=0;k<u.m;k++){g.fillStyle=k<l?'#ff8fab':'#e5d5e5';rr(x+78+k*15,y+74,11,10,3);g.fill();}
 button({x:x+225,y:y+22,w:115,h:48,f:()=>{if(max)return;if(save.coins>=c){save.coins-=c;save.up[u.k]++;store();sfx.lvl();}else{tone(200,.15,'square',.08);say(W/2,470,'金币不够啦','#ff4d6d',26);}}},max?'已满':c+' 金币',max?'#ddd':save.coins>=c?'#ffd23f':'#e5dce8',18,max);});
-button({x:W/2-80,y:462,w:160,h:48,f:()=>scene='title'},'返回','#a0c4ff',22);for(const f of floats){f.l-=1/60;txt(f.s,f.x,f.y,f.sz,f.c,'center',OL,5);}floats=floats.filter(f=>f.l>0);}
+button({x:W/2-80,y:462,w:160,h:48,f:()=>scene='title'},'返回','#a0c4ff',22);button({x:W/2+150,y:462,w:150,h:48,f:()=>{lvQ=1}},'重置等级','#ff9aa2',20);
+if(lvQ){buttons.length=0;g.fillStyle='rgba(30,15,45,.7)';g.fillRect(0,0,W,H);panel(W/2-230,150,460,240);txt('确定把所有技能等级清零？',W/2,215,30,'#3b2350','center',null);txt('已花的金币不退还',W/2,262,18,'#9a8c98','center',null);
+button({x:W/2-190,y:300,w:170,h:62,f:()=>{for(const k in save.up)save.up[k]=0;store();lvQ=0;sfx.lvl();say(W/2,470,'技能等级已清零','#ffd23f',26);}},'确定','#ff8fab',26);button({x:W/2+20,y:300,w:170,h:62,f:()=>{lvQ=0}},'取消','#a0c4ff',26);}
+for(const f of floats){f.l-=1/60;txt(f.s,f.x,f.y,f.sz,f.c,'center',OL,5);}floats=floats.filter(f=>f.l>0);}
 function drawHelp(){bg(0);panel(120,30,720,480);txt('玩法说明',W/2,74,36,'#ff8fab');
 [HERO_NAME+'会自动朝最近的敌人扔粉笔头','点屏幕任意空白处或【跳】：跳跃，空中还能再跳一次','【冲撞】向前猛冲：伤害×4、冲撞中无敌，还能撞碎子弹','【护盾】几秒内不受伤害，碰到的敌人会被弹开','【大招】打怪充满能量后释放，清屏并重创首领','升级时三选一强化，某些组合会激活「羁绊」','每章 3 波小怪 + 1 个首领，注意首领的攻击预警','金币可以在商店里永久强化团子'].forEach((s,i)=>txt(s,160,128+i*40,20,'#3b2350','left',null));
 button({x:W/2-80,y:446,w:160,h:52,f:()=>scene='title'},'知道啦','#7bed9f',24);}
