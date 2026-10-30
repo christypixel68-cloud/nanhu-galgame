@@ -165,7 +165,7 @@ function onP(e){e.preventDefault();const ts=e.changedTouches||[e];for(const tt o
 cv.addEventListener('touchstart',onP,{passive:false});cv.addEventListener('mousedown',e=>{if(!('ontouchstart' in window))onP(e)});
 addEventListener('keydown',e=>{if(scene!='play')return;if(e.code=='Space'||e.code=='ArrowUp'||e.code=='KeyW')jump();if(e.code=='KeyJ'||e.code=='KeyX')dash();if(e.code=='ArrowRight'||e.code=='KeyD')stepH(1);if(e.code=='ArrowLeft'||e.code=='KeyA')stepH(-1);if(e.code=='KeyK'||e.code=='KeyC')shield();if(e.code=='KeyL'||e.code=='KeyV')ult();if(e.code=='Escape')scene='pause';});
 function jump(){if(P.ground){P.vy=-690*(P.sticky>0?.62:1);P.ground=false;sfx.jump();dust(P.x,GY);}else if(P.jumps<1){P.vy=-590;P.jumps++;tone(620,.1,'square',.04,420);ring(P.x,P.y,'rgba(255,255,255,.8)',30,.25);}}
-function stepH(d){if(P.stp>0||P.dash>0)return;P.stp=.5;P.sd=d;P.shit=0;sfx.tap();if(d<0){P.inv=Math.max(P.inv,.35);burst(P.x,P.y-30,'#c7f9ff',6,140,5);}}
+function stepH(d){if(P.stp>0||P.dash>0)return;P.stp=.5;P.sd=d;P.shit=0;sfx.tap();if(d<0){burst(P.x,P.y-30,'#c7f9ff',6,140,5);}}
 function dash(){if(P.dcdT>0)return;P.dash=.32;P.did++;P.dcdT=P.dcd;P.inv=Math.max(P.inv,.45);sfx.dash();shake=Math.max(shake,4);}
 function shield(){if(P.scdT>0)return;P.shield=P.sdur;P.scdT=9;sfx.shield();ring(P.x,P.y-32,'#90e0ef',70);
 if(P.syn.wall)for(let i=0;i<12;i++){const a=i/12*TAU;shots.push(mkShot(P.x,P.y-32,Math.cos(a)*520,Math.sin(a)*520,1));}}
